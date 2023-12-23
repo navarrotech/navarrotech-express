@@ -1,6 +1,6 @@
 {
   "name": "navarrotech-express",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "description": "A standardized set of express utils wrapped into one",
   "main": "index.ts",
   "license": "MIT",
