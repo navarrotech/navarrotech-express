@@ -23,6 +23,7 @@ import expressSession from "express-session";
 
 // Misc
 import path from "path";
+import { v4 as uuid } from "uuid";
 
 export type Request<T extends object = Record<string, any>> = {
   session: {
@@ -43,19 +44,19 @@ export type Route = {
 export type CreateOptions<
   T extends "redis" | "postgres" | "memory" | Store = "postgres"
 > = {
-  cors: boolean | string;
+  store: T;
+  storeSettings: T extends "redis"
+    ? Partial<RedisStoreOptions>
+    : Partial<PGStoreOptions>;
+  cors?: boolean | string;
   routes?: Route[];
-  store?: T;
-  customMiddleware: any[],
+  customMiddleware?: any[],
   dontTrustProxy?: boolean;
   helmetOptions?: Partial<HelmetOptions>;
   rateLimitOptions?: Partial<RateLimitOptions>;
   sessionSecret?: string;
   sessionSettings?: Partial<SessionOptions>;
   publicFolderPath?: string;
-  storeSettings: T extends "redis"
-    ? Partial<RedisStoreOptions>
-    : Partial<PGStoreOptions>;
 };
 
 type SessionedCallback = (req: Request, res: Response, next?: () => void) => void;
@@ -90,7 +91,7 @@ export default function createApplication(options: CreateOptions): SessionedAppl
   }
 
   if (!options.dontTrustProxy) {
-    app.enable("trust proxy");
+    app.set("trust proxy", 1);
   }
 
   // Register middleware
@@ -149,6 +150,9 @@ export default function createApplication(options: CreateOptions): SessionedAppl
   app.use(
     expressSession({
       secret: options.sessionSecret || "lizard-kangaroo",
+      genid: function(req) {
+        return uuid() // use UUIDs for session IDs
+      },
       name: "sid",
       resave: true, // Save even if nothing is changed
       saveUninitialized: false, // Save even if nothing has been set in req.session yet
