@@ -1,10 +1,20 @@
 {
   "name": "navarrotech-express",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A standardized set of express utils wrapped into one",
   "main": "index.ts",
-  "author": "Alex Navarro",
+  "author": {
+    "name": "Alex Navarro",
+    "email": "alex@navarrotech.net"
+  },
+  "scripts": {
+    "build": "tsc index.ts --skipLibCheck --esModuleInterop && mv index.js dist.js"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/navarrotech/navarrotech-express"
+  },
   "dependencies": {
     "@types/connect-pg-simple": "^7.0.3",
     "@types/connect-redis": "^0.0.23",
@@ -22,6 +32,7 @@
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
     "express-session": "^1.17.3",
-    "helmet": "^7.1.0"
+    "helmet": "^7.1.0",
+    "typescript": "^5.3.3"
   }
 }
