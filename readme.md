@@ -61,7 +61,7 @@ const routes = [
     path: '/example',
     method: 'get',
     validator: yourYupValidator,
-    fn: (req, res) => {
+    handler: (req, res) => {
       // Route logic
     },
   },

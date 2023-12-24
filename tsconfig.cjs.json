@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+       "lib": [
+          "ESNext"
+       ],
+       "declaration": true,
+       "outDir": "dist/cjs",
+
+       "esModuleInterop": true,
+       "strict": true,
+
+       "target": "ES6",
+       "module": "CommonJS",
+       "moduleResolution": "Node",
+       "sourceMap": true,
+    },
+    "include": ["index.ts", "types.ts", "test.ts"],
+    "exclude": ["node_modules", "**/*.spec.ts"]
+ }

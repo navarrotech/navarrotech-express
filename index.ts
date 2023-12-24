@@ -1,13 +1,7 @@
 // Copyright © 2023 Navarrotech
 
 // Types
-import type { Application, Request as NormalRequest, Response } from "express";
-import type { SessionOptions, Store, Session } from "express-session";
-import type { AnyObjectSchema } from "yup";
-import type { PGStoreOptions } from "connect-pg-simple";
-import type { RedisStoreOptions } from "connect-redis";
-import type { HelmetOptions } from "helmet";
-import type { Options as RateLimitOptions } from "express-rate-limit";
+import type { CreateOptions, Request, Response, NextFunction, SessionedApplication, Store } from "./types";
 
 // Express & Middleware
 import express from "express";
@@ -18,59 +12,14 @@ import rateLimit from "express-rate-limit";
 
 // Session stores
 import PGStore from "connect-pg-simple";
-import RedisStore from "connect-redis";
 import expressSession from "express-session";
 
 // Misc
 import path from "path";
 import { v4 as uuid } from "uuid";
 
-export type Request<T extends object = Record<string, any>> = {
-  session: {
-    user: {
-      id: string;
-    } & T &
-      Record<string, any>;
-  } & Session;
-} & NormalRequest;
-
-export type Route = {
-  path: string;
-  method: "all" | "get" | "post" | "put" | "delete";
-  validator?: AnyObjectSchema;
-  fn: (req: Request, res: Response) => void;
-};
-
-export type CreateOptions<
-  T extends "redis" | "postgres" | "memory" | Store = "postgres"
-> = {
-  store: T;
-  storeSettings: T extends "redis"
-    ? Partial<RedisStoreOptions>
-    : Partial<PGStoreOptions>;
-  cors?: boolean | string;
-  routes?: Route[];
-  customMiddleware?: any[],
-  dontTrustProxy?: boolean;
-  helmetOptions?: Partial<HelmetOptions>;
-  rateLimitOptions?: Partial<RateLimitOptions>;
-  sessionSecret?: string;
-  sessionSettings?: Partial<SessionOptions>;
-  publicFolderPath?: string;
-};
-
-type SessionedCallback = (req: Request, res: Response, next?: () => void) => void;
-type SessionedRoute = (path: string, fn: SessionedCallback) => Application;
-type SessionedApplication = Application & {
-  use: SessionedRoute;
-  get: SessionedRoute;
-  post: SessionedRoute;
-  put: SessionedRoute;
-  delete: SessionedRoute;
-}
-
 export default function createApplication(options: CreateOptions): SessionedApplication {
-  const app = express() as unknown as SessionedApplication;
+  const app = express();
 
   if (options.cors === true) {
     app.use(
@@ -96,6 +45,7 @@ export default function createApplication(options: CreateOptions): SessionedAppl
 
   // Register middleware
   app.use(
+    '*',
     helmet({
       contentSecurityPolicy: false,
       ...(options.helmetOptions || {}),
@@ -105,8 +55,8 @@ export default function createApplication(options: CreateOptions): SessionedAppl
     express.json({
       limit: "100mb",
     }),
-    // If they've sent an invalid JSON in the body of a POST request, let's catch it here!
-    function (err, req, res, next) {
+    // @ts-ignore If they've sent an invalid JSON in the body of a POST request, let's catch it here!
+    function (err: any, req: Request, res: Response, next: NextFunction) {
       // @ts-ignore
       if (err instanceof SyntaxError && err?.status === 400 && "body" in err) {
         res.status(400).send({
@@ -137,9 +87,6 @@ export default function createApplication(options: CreateOptions): SessionedAppl
   let madeStore: Store;
   if (options.store === "postgres") {
     const Store = PGStore(expressSession);
-    madeStore = new Store(options.storeSettings);
-  } else if (options.store === "redis") {
-    const Store = RedisStore(expressSession);
     madeStore = new Store(options.storeSettings);
   } else if (options.store !== "memory" && options.store !== undefined) {
     madeStore = options.store;
@@ -173,7 +120,7 @@ export default function createApplication(options: CreateOptions): SessionedAppl
 
   if (options.routes) {
     options.routes.forEach((func) => {
-      const { fn, method, path, validator } = func;
+      const { handler, method="post", path, validator } = func;
       app[method](path, async (request, response) => {
 
         if (validator) {
@@ -190,8 +137,21 @@ export default function createApplication(options: CreateOptions): SessionedAppl
           }
         }
 
-        // @ts-ignore
-        fn(request, response);
+        try {
+          // @ts-ignore
+          handler(request, response);
+        } catch (err: any) {
+          console.error(err);
+          if(!response.headersSent){
+            response
+              .status(500)
+              .send({
+                code: 500,
+                message: "Internal server error",
+                error: process.env.NODE_ENV === "development" ? err : null,
+              });
+          }
+        }
       });
     });
   }
@@ -213,7 +173,7 @@ export default function createApplication(options: CreateOptions): SessionedAppl
     })
   );
 
-  return app;
+  return app as unknown as SessionedApplication;
 }
 
-export { Response };
+export * from './types'
