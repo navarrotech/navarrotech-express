@@ -57,7 +57,7 @@ function createApplication(options) {
         limit: "100mb",
     }), 
     // @ts-ignore If they've sent an invalid JSON in the body of a POST request, let's catch it here!
-    function (err, req, res, next) {
+    function catchJsonError(err, req, res, next) {
         // @ts-ignore
         if (err instanceof SyntaxError && err?.status === 400 && "body" in err) {
             res.status(400).send({
@@ -111,7 +111,24 @@ function createApplication(options) {
         },
         ...(options.sessionSettings || {}),
         store: madeStore,
-    }));
+    }), function sessionMiddleware(req, res, next) {
+        if (req.session) {
+            // @ts-ignore
+            req.session.saveAsync = () => new Promise(acc => req.session.save(() => acc(true)));
+            // @ts-ignore
+            req.session.destroyAsync = () => new Promise(acc => req.session.destroy(() => acc(true)));
+            // @ts-ignore
+            req.session.reloadAsync = () => new Promise(acc => req.session.reload(() => acc(true)));
+            // @ts-ignore
+            req.session.regenerateAsync = () => new Promise(acc => req.session.regenerate(() => acc(true)));
+            // @ts-ignore
+            if (!!req.session?.user?.id) {
+                // @ts-ignore
+                req.session.authorized = true;
+            }
+        }
+        next();
+    });
     // Advanced route registration
     app.all("/ping", (req, res) => res.status(200).send("pong"));
     if (options.routes) {

@@ -56,7 +56,7 @@ export default function createApplication(options: CreateOptions): SessionedAppl
       limit: "100mb",
     }),
     // @ts-ignore If they've sent an invalid JSON in the body of a POST request, let's catch it here!
-    function (err: any, req: Request, res: Response, next: NextFunction) {
+    function catchJsonError(err: any, req: Request, res: Response, next: NextFunction) {
       // @ts-ignore
       if (err instanceof SyntaxError && err?.status === 400 && "body" in err) {
         res.status(400).send({
@@ -112,7 +112,25 @@ export default function createApplication(options: CreateOptions): SessionedAppl
       },
       ...(options.sessionSettings || {}),
       store: madeStore,
-    })
+    }),
+    function sessionMiddleware(req, res, next){
+      if(req.session){
+        // @ts-ignore
+        req.session.saveAsync = () => new Promise(acc => req.session.save(() => acc(true)))
+        // @ts-ignore
+        req.session.destroyAsync = () => new Promise(acc => req.session.destroy(() => acc(true)))
+        // @ts-ignore
+        req.session.reloadAsync = () => new Promise(acc => req.session.reload(() => acc(true)))
+        // @ts-ignore
+        req.session.regenerateAsync = () => new Promise(acc => req.session.regenerate(() => acc(true)))
+        // @ts-ignore
+        if(!!req.session?.user?.id){
+          // @ts-ignore
+          req.session.authorized = true;
+        }
+      }
+      next();
+    },
   );
 
   // Advanced route registration
