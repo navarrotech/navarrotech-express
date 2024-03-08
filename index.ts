@@ -77,12 +77,6 @@ export default function createApplication(options: CreateOptions): SessionedAppl
     })
   );
 
-  if(options.customMiddleware){
-    options.customMiddleware.forEach((middleware) => {
-      app.use(middleware);
-    });
-  }
-
   // Session middleware
   let madeStore: Store;
   if (options.store === "postgres") {
@@ -106,8 +100,8 @@ export default function createApplication(options: CreateOptions): SessionedAppl
       rolling: true,
       cookie: {
         secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production",
         httpOnly: true,
-        sameSite: true,
         maxAge: 1000 * 60 * 60 * 24, // 24 hours
       },
       ...(options.sessionSettings || {}),
@@ -132,6 +126,12 @@ export default function createApplication(options: CreateOptions): SessionedAppl
       next();
     },
   );
+
+  if(options.customMiddleware){
+    options.customMiddleware.forEach((middleware) => {
+      app.use(middleware);
+    });
+  }
 
   // Advanced route registration
   app.all("/ping", (req, res) => res.status(200).send("pong"));
