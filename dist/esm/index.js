@@ -133,8 +133,8 @@ function createApplication(options) {
     app.all("/ping", (req, res) => res.status(200).send("pong"));
     if (options.routes) {
         options.routes.forEach((func) => {
-            const { handler, method = "post", path, validator, middlewares } = func;
-            app[method](path, async (request, response) => {
+            const { handler, method = "post", path, validator, middlewares = [] } = func;
+            app[method](path, ...middlewares, async (request, response) => {
                 if (validator) {
                     try {
                         await validator.validate(request.body);
@@ -150,11 +150,6 @@ function createApplication(options) {
                     }
                 }
                 try {
-                    if (middlewares?.length) {
-                        for (const middleware of middlewares) {
-                            await middleware(request, response, null);
-                        }
-                    }
                     // @ts-ignore
                     handler(request, response);
                 }
