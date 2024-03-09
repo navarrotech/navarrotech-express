@@ -138,7 +138,7 @@ export default function createApplication(options: CreateOptions): SessionedAppl
 
   if (options.routes) {
     options.routes.forEach((func) => {
-      const { handler, method="post", path, validator } = func;
+      const { handler, method="post", path, validator, middlewares } = func;
       app[method](path, async (request, response) => {
 
         if (validator) {
@@ -156,6 +156,11 @@ export default function createApplication(options: CreateOptions): SessionedAppl
         }
 
         try {
+          if (middlewares?.length) {
+            for (const middleware of middlewares) {
+              await middleware(request, response, null);
+            }
+          }
           // @ts-ignore
           handler(request, response);
         } catch (err: any) {

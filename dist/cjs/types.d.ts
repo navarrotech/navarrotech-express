@@ -20,6 +20,7 @@ export type Route = {
     path: string;
     method?: "all" | "get" | "post" | "put" | "delete";
     validator?: AnyObjectSchema;
+    middlewares?: any[];
     handler: (req: Request, res: Response) => void;
 };
 export type BaseOptions = {

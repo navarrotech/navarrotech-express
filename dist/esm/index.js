@@ -77,11 +77,6 @@ function createApplication(options) {
         standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
         ...(options.rateLimitOptions || {}),
     }));
-    if (options.customMiddleware) {
-        options.customMiddleware.forEach((middleware) => {
-            app.use(middleware);
-        });
-    }
     // Session middleware
     let madeStore;
     if (options.store === "postgres") {
@@ -105,8 +100,8 @@ function createApplication(options) {
         rolling: true,
         cookie: {
             secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production",
             httpOnly: true,
-            sameSite: true,
             maxAge: 1000 * 60 * 60 * 24, // 24 hours
         },
         ...(options.sessionSettings || {}),
@@ -129,11 +124,16 @@ function createApplication(options) {
         }
         next();
     });
+    if (options.customMiddleware) {
+        options.customMiddleware.forEach((middleware) => {
+            app.use(middleware);
+        });
+    }
     // Advanced route registration
     app.all("/ping", (req, res) => res.status(200).send("pong"));
     if (options.routes) {
         options.routes.forEach((func) => {
-            const { handler, method = "post", path, validator } = func;
+            const { handler, method = "post", path, validator, middlewares } = func;
             app[method](path, async (request, response) => {
                 if (validator) {
                     try {
@@ -150,6 +150,11 @@ function createApplication(options) {
                     }
                 }
                 try {
+                    if (middlewares?.length) {
+                        for (const middleware of middlewares) {
+                            await middleware(request, response, null);
+                        }
+                    }
                     // @ts-ignore
                     handler(request, response);
                 }

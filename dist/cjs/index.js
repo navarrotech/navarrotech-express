@@ -78,11 +78,6 @@ function createApplication(options) {
     }, 
     // Rate limiter:
     (0, express_rate_limit_1.default)(Object.assign({ windowMs: 15 * 60 * 1000, max: 1 * 1000, standardHeaders: true }, (options.rateLimitOptions || {}))));
-    if (options.customMiddleware) {
-        options.customMiddleware.forEach((middleware) => {
-            app.use(middleware);
-        });
-    }
     // Session middleware
     let madeStore;
     if (options.store === "postgres") {
@@ -99,8 +94,8 @@ function createApplication(options) {
             return (0, uuid_1.v4)(); // use UUIDs for session IDs
         }, name: "sid", resave: true, saveUninitialized: false, rolling: true, cookie: {
             secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production",
             httpOnly: true,
-            sameSite: true,
             maxAge: 1000 * 60 * 60 * 24, // 24 hours
         } }, (options.sessionSettings || {})), { store: madeStore })), function sessionMiddleware(req, res, next) {
         var _a, _b;
@@ -121,11 +116,16 @@ function createApplication(options) {
         }
         next();
     });
+    if (options.customMiddleware) {
+        options.customMiddleware.forEach((middleware) => {
+            app.use(middleware);
+        });
+    }
     // Advanced route registration
     app.all("/ping", (req, res) => res.status(200).send("pong"));
     if (options.routes) {
         options.routes.forEach((func) => {
-            const { handler, method = "post", path, validator } = func;
+            const { handler, method = "post", path, validator, middlewares } = func;
             app[method](path, (request, response) => __awaiter(this, void 0, void 0, function* () {
                 if (validator) {
                     try {
@@ -139,6 +139,11 @@ function createApplication(options) {
                     }
                 }
                 try {
+                    if (middlewares === null || middlewares === void 0 ? void 0 : middlewares.length) {
+                        for (const middleware of middlewares) {
+                            yield middleware(request, response, null);
+                        }
+                    }
                     // @ts-ignore
                     handler(request, response);
                 }
