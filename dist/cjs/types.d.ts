@@ -9,7 +9,7 @@ export type Request<T extends object = Record<string, any>> = {
         user: {
             id: string;
         } & T & Record<string, any>;
-        authorized: false;
+        authorized: boolean;
         saveAsync: () => Promise<void>;
         destroyAsync: () => Promise<void>;
         reloadAsync: () => Promise<void>;
